@@ -468,7 +468,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            133,
+            124,
             percent_text,
             percent_font,
             fill=(255, 255, 255, 255),
