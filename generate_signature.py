@@ -1,11 +1,12 @@
 from pathlib import Path
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+
 from PIL import Image, ImageDraw, ImageFont
 
 
 # ============================================================
-# CHARACTER / FILE SETTINGS
+# SERVPRO CHARACTER SETTINGS
 # ============================================================
 
 XML_URL = "https://ladderslasher.d2jsp.org/xmlChar.php?i=568115"
@@ -14,19 +15,22 @@ OUTPUT_WIDTH = 400
 OUTPUT_HEIGHT = 150
 
 ROOT = Path(__file__).resolve().parent
+
 BACKGROUND_FILE = ROOT / "assets" / "signature_background.png"
+
 OUTPUT_FILE = ROOT / "signature.png"
 
 
 # ============================================================
-# XML
+# FETCH XML
 # ============================================================
 
 def fetch_xml():
+
     request = Request(
         XML_URL,
         headers={
-            "User-Agent": "SERVPRO-d2jsp-LadderSlasher-signature/2.0"
+            "User-Agent": "SERVPRO-LadderSlasher-signature/3.0"
         }
     )
 
@@ -39,6 +43,7 @@ def fetch_xml():
 # ============================================================
 
 def parse_proficiencies(raw):
+
     result = {}
 
     if not raw:
@@ -49,13 +54,22 @@ def parse_proficiencies(raw):
         if not entry:
             continue
 
-        parts = [part.strip() for part in entry.split(",")]
+        parts = [
+            part.strip()
+            for part in entry.split(",")
+        ]
 
         try:
+
             prof_id = int(parts[0])
+
             rank = int(parts[1])
 
-            progress = int(parts[2]) if len(parts) >= 3 else 0
+            progress = (
+                int(parts[2])
+                if len(parts) >= 3
+                else 0
+            )
 
             result[prof_id] = {
                 "rank": rank,
@@ -69,6 +83,7 @@ def parse_proficiencies(raw):
 
 
 def get_prof(data, prof_id):
+
     return data.get(
         prof_id,
         {
@@ -79,36 +94,59 @@ def get_prof(data, prof_id):
 
 
 # ============================================================
-# PROFICIENCY PERCENTAGE
+# PROFICIENCY PERCENTAGES
 # ============================================================
 
 def requirement_for_next_rank(rank):
+
+    # Confirmed Ladder Slasher progression:
+    #
+    # Rank 0 -> 1 = 1000
+    # Rank 1 -> 2 = 2000
+    # Rank 2 -> 3 = 3000
+    # Rank 3 -> 4 = 4000
+    # Rank 4 -> 5 = 5000
+    #
+    # etc.
+
     return (rank + 1) * 1000
 
 
-def percentage_to_next_rank(rank, progress):
+def percentage_to_next_rank(
+    rank,
+    progress
+):
 
-    required = requirement_for_next_rank(rank)
+    required = requirement_for_next_rank(
+        rank
+    )
 
     if required <= 0:
         return 0.0
 
-    percentage = (progress / required) * 100
+    percentage = (
+        progress / required
+    ) * 100
 
     return max(
         0.0,
-        min(percentage, 100.0)
+        min(
+            percentage,
+            100.0
+        )
     )
 
 
 # ============================================================
-# FONT HANDLING
+# FONT
 # ============================================================
 
 def get_font(size):
 
     possible_fonts = [
+
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
     ]
 
@@ -125,7 +163,7 @@ def get_font(size):
 
 
 # ============================================================
-# TEXT DRAWING
+# CENTERED TEXT
 # ============================================================
 
 def draw_centered_text(
@@ -139,7 +177,7 @@ def draw_centered_text(
     stroke_fill=(0, 0, 0, 255)
 ):
 
-    bounding_box = draw.textbbox(
+    bbox = draw.textbbox(
         (0, 0),
         text,
         font=font,
@@ -147,11 +185,14 @@ def draw_centered_text(
     )
 
     text_width = (
-        bounding_box[2]
-        - bounding_box[0]
+        bbox[2]
+        - bbox[0]
     )
 
-    x = center_x - (text_width // 2)
+    x = (
+        center_x
+        - text_width // 2
+    )
 
     draw.text(
         (x, y),
@@ -164,22 +205,24 @@ def draw_centered_text(
 
 
 # ============================================================
-# MAIN
+# MAIN GENERATOR
 # ============================================================
 
 def main():
 
     # --------------------------------------------------------
-    # Fetch live Ladder Slasher XML
+    # Read live Ladder Slasher XML
     # --------------------------------------------------------
 
     raw_xml = fetch_xml()
 
-    xml = ET.fromstring(raw_xml)
+    xml = ET.fromstring(
+        raw_xml
+    )
 
 
     # --------------------------------------------------------
-    # Dynamic character information
+    # Character name
     # --------------------------------------------------------
 
     character_name = xml.findtext(
@@ -187,10 +230,20 @@ def main():
         "SERVPRO"
     )
 
+
+    # --------------------------------------------------------
+    # Character level
+    # --------------------------------------------------------
+
     character_level = xml.findtext(
         "level",
         "?"
     )
+
+
+    # --------------------------------------------------------
+    # Core
+    # --------------------------------------------------------
 
     core_value = xml.findtext(
         "core",
@@ -198,26 +251,39 @@ def main():
     )
 
     if core_value == "0":
+
         core_name = "Original"
+
     else:
+
         core_name = "Hardcore"
 
 
     # --------------------------------------------------------
-    # Parse proficiency data
+    # Parse proficiency XML
     # --------------------------------------------------------
 
-    weapon_profs = parse_proficiencies(
-        xml.findtext("wprof", "")
+    weapon_profs = (
+        parse_proficiencies(
+            xml.findtext(
+                "wprof",
+                ""
+            )
+        )
     )
 
-    skill_profs = parse_proficiencies(
-        xml.findtext("sprof", "")
+    skill_profs = (
+        parse_proficiencies(
+            xml.findtext(
+                "sprof",
+                ""
+            )
+        )
     )
 
 
     # --------------------------------------------------------
-    # SERVPRO confirmed proficiency mappings
+    # Confirmed SERVPRO mappings
     # --------------------------------------------------------
 
     dagger = get_prof(
@@ -242,10 +308,15 @@ def main():
 
 
     proficiencies = [
+
         dagger,
+
         axe,
+
         sword,
+
         transmuting
+
     ]
 
 
@@ -253,17 +324,20 @@ def main():
     # Load background
     # --------------------------------------------------------
 
-    image = Image.open(
-        BACKGROUND_FILE
-    ).convert("RGBA")
-
-    image = image.resize(
-        (
-            OUTPUT_WIDTH,
-            OUTPUT_HEIGHT
-        ),
-        Image.Resampling.LANCZOS
+    image = (
+        Image.open(
+            BACKGROUND_FILE
+        )
+        .convert("RGBA")
+        .resize(
+            (
+                OUTPUT_WIDTH,
+                OUTPUT_HEIGHT
+            ),
+            Image.Resampling.LANCZOS
+        )
     )
+
 
     draw = ImageDraw.Draw(
         image
@@ -284,13 +358,13 @@ def main():
 
 
     # --------------------------------------------------------
-    # Dynamic Character Name
+    # Dynamic SERVPRO name
     # --------------------------------------------------------
 
     draw_centered_text(
         draw,
         210,
-        9,
+        8,
         character_name,
         name_font,
         fill=(255, 220, 0, 255),
@@ -300,7 +374,10 @@ def main():
 
 
     # --------------------------------------------------------
-    # Dynamic Level + Core
+    # Dynamic Level / Core
+    #
+    # Y = 30 to move it farther down into the center
+    # of the black bar.
     # --------------------------------------------------------
 
     character_info = (
@@ -311,7 +388,7 @@ def main():
     draw_centered_text(
         draw,
         210,
-        31,
+        30,
         character_info,
         info_font,
         fill=(255, 255, 255, 255),
@@ -321,28 +398,26 @@ def main():
 
 
     # --------------------------------------------------------
-    # Proficiency locations
+    # Centers of the 4 proficiency boxes
     #
-    # Background should already contain:
-    #
-    # DAGGER
-    # AXE
-    # SWORD
-    # TRANSMUTING
-    #
-    # Python only draws rank + percentage.
+    # Adjusted for your current SERVPRO background.
     # --------------------------------------------------------
 
     proficiency_centers = [
+
         115,   # Dagger
+
         169,   # Axe
+
         225,   # Sword
+
         282    # Transmuting
+
     ]
 
 
     # --------------------------------------------------------
-    # Draw live ranks + percentages
+    # Draw rank + percentage
     # --------------------------------------------------------
 
     for center_x, proficiency in zip(
@@ -354,17 +429,24 @@ def main():
 
         progress = proficiency["progress"]
 
-        percentage = percentage_to_next_rank(
-            rank,
-            progress
+        percentage = (
+            percentage_to_next_rank(
+                rank,
+                progress
+            )
         )
 
 
+        # ----------------------------------------------------
         # Rank
+        #
+        # Centered inside the black box.
+        # ----------------------------------------------------
+
         draw_centered_text(
             draw,
             center_x,
-            104,
+            106,
             str(rank),
             rank_font,
             fill=(255, 220, 0, 255),
@@ -373,7 +455,12 @@ def main():
         )
 
 
+        # ----------------------------------------------------
         # Percentage
+        #
+        # Centered directly underneath the same box.
+        # ----------------------------------------------------
+
         percent_text = (
             f"{percentage:.1f}%"
         )
@@ -391,7 +478,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # Save finished signature
+    # Save final signature
     # --------------------------------------------------------
 
     image.convert("RGB").save(
