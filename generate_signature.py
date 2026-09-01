@@ -364,7 +364,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            118,
+            104,
             str(rank),
             rank_font,
             fill=(255, 220, 0, 255),
