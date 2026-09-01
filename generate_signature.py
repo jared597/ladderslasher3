@@ -334,10 +334,10 @@ def main():
     # --------------------------------------------------------
 
     proficiency_centers = [
-        132,   # Dagger
-        189,   # Axe
-        246,   # Sword
-        305    # Transmuting
+        115,   # Dagger
+        169,   # Axe
+        225,   # Sword
+        282    # Transmuting
     ]
 
 
@@ -381,7 +381,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            134,
+            133,
             percent_text,
             percent_font,
             fill=(255, 255, 255, 255),
