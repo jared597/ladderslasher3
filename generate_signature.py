@@ -2,21 +2,26 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 
 # ============================================================
-# SERVPRO CHARACTER SETTINGS
+# SERVPRO - LADDER SLASHER DYNAMIC SIGNATURE
 # ============================================================
 
 XML_URL = "https://ladderslasher.d2jsp.org/xmlChar.php?i=568115"
 
 OUTPUT_WIDTH = 400
 OUTPUT_HEIGHT = 150
+MAX_FILE_SIZE = 70 * 1024
 
 ROOT = Path(__file__).resolve().parent
 
-BACKGROUND_FILE = ROOT / "assets" / "signature_background.png"
+BACKGROUND_FILE = (
+    ROOT
+    / "assets"
+    / "signature_background.png"
+)
 
 OUTPUT_FILE = ROOT / "signature.png"
 
@@ -30,16 +35,21 @@ def fetch_xml():
     request = Request(
         XML_URL,
         headers={
-            "User-Agent": "SERVPRO-LadderSlasher-signature/3.0"
+            "User-Agent":
+            "SERVPRO-LadderSlasher-Signature/4.0"
         }
     )
 
-    with urlopen(request, timeout=20) as response:
+    with urlopen(
+        request,
+        timeout=20
+    ) as response:
+
         return response.read()
 
 
 # ============================================================
-# PROFICIENCY PARSING
+# PARSE PROFICIENCIES
 # ============================================================
 
 def parse_proficiencies(raw):
@@ -77,12 +87,16 @@ def parse_proficiencies(raw):
             }
 
         except (ValueError, IndexError):
+
             continue
 
     return result
 
 
-def get_prof(data, prof_id):
+def get_prof(
+    data,
+    prof_id
+):
 
     return data.get(
         prof_id,
@@ -94,20 +108,10 @@ def get_prof(data, prof_id):
 
 
 # ============================================================
-# PROFICIENCY PERCENTAGES
+# PROFICIENCY PERCENTAGE
 # ============================================================
 
 def requirement_for_next_rank(rank):
-
-    # Confirmed Ladder Slasher progression:
-    #
-    # Rank 0 -> 1 = 1000
-    # Rank 1 -> 2 = 2000
-    # Rank 2 -> 3 = 3000
-    # Rank 3 -> 4 = 4000
-    # Rank 4 -> 5 = 5000
-    #
-    # etc.
 
     return (rank + 1) * 1000
 
@@ -117,8 +121,10 @@ def percentage_to_next_rank(
     progress
 ):
 
-    required = requirement_for_next_rank(
-        rank
+    required = (
+        requirement_for_next_rank(
+            rank
+        )
     )
 
     if required <= 0:
@@ -138,16 +144,19 @@ def percentage_to_next_rank(
 
 
 # ============================================================
-# FONT
+# FONTS
 # ============================================================
 
 def get_font(size):
 
     possible_fonts = [
 
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/"
+        "dejavu/DejaVuSans-Bold.ttf",
 
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
+        "/usr/share/fonts/truetype/"
+        "liberation2/LiberationSans-Bold.ttf"
+
     ]
 
     for font_path in possible_fonts:
@@ -163,7 +172,7 @@ def get_font(size):
 
 
 # ============================================================
-# CENTERED TEXT
+# CENTER TEXT
 # ============================================================
 
 def draw_centered_text(
@@ -205,13 +214,75 @@ def draw_centered_text(
 
 
 # ============================================================
-# MAIN GENERATOR
+# SAVE UNDER 70 KB
+# ============================================================
+
+def save_optimized(image):
+
+    final_image = (
+        image.convert("RGB")
+    )
+
+    for colors in [
+        256,
+        192,
+        160,
+        128,
+        96,
+        64
+    ]:
+
+        optimized = (
+            final_image.quantize(
+                colors=colors,
+                method=(
+                    Image.Quantize.MEDIANCUT
+                ),
+                dither=(
+                    Image.Dither.FLOYDSTEINBERG
+                )
+            )
+        )
+
+        optimized.save(
+            OUTPUT_FILE,
+            "PNG",
+            optimize=True,
+            compress_level=9
+        )
+
+        file_size = (
+            OUTPUT_FILE.stat().st_size
+        )
+
+        print(
+            f"{colors} colors: "
+            f"{file_size / 1024:.1f} KB"
+        )
+
+        if file_size <= MAX_FILE_SIZE:
+
+            print(
+                "Signature saved successfully: "
+                f"{file_size / 1024:.1f} KB"
+            )
+
+            return
+
+    print(
+        "Warning: Signature could not "
+        "be reduced below 70 KB."
+    )
+
+
+# ============================================================
+# MAIN
 # ============================================================
 
 def main():
 
     # --------------------------------------------------------
-    # Read live Ladder Slasher XML
+    # FETCH LIVE SERVPRO XML
     # --------------------------------------------------------
 
     raw_xml = fetch_xml()
@@ -222,45 +293,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # Character name
-    # --------------------------------------------------------
-
-    character_name = xml.findtext(
-        "name",
-        "SERVPRO"
-    )
-
-
-    # --------------------------------------------------------
-    # Character level
-    # --------------------------------------------------------
-
-    character_level = xml.findtext(
-        "level",
-        "?"
-    )
-
-
-    # --------------------------------------------------------
-    # Core
-    # --------------------------------------------------------
-
-    core_value = xml.findtext(
-        "core",
-        "0"
-    )
-
-    if core_value == "0":
-
-        core_name = "Original"
-
-    else:
-
-        core_name = "Hardcore"
-
-
-    # --------------------------------------------------------
-    # Parse proficiency XML
+    # PARSE PROFICIENCIES
     # --------------------------------------------------------
 
     weapon_profs = (
@@ -283,12 +316,20 @@ def main():
 
 
     # --------------------------------------------------------
-    # Confirmed SERVPRO mappings
+    # SERVPRO PROFICIENCIES
+    #
+    # Display order:
+    #
+    # Sword
+    # Axe
+    # Dagger
+    # Glyphing
+    # Transmuting
     # --------------------------------------------------------
 
-    dagger = get_prof(
+    sword = get_prof(
         weapon_profs,
-        3
+        0
     )
 
     axe = get_prof(
@@ -296,8 +337,13 @@ def main():
         2
     )
 
-    sword = get_prof(
+    dagger = get_prof(
         weapon_profs,
+        3
+    )
+
+    glyphing = get_prof(
+        skill_profs,
         0
     )
 
@@ -309,11 +355,13 @@ def main():
 
     proficiencies = [
 
-        dagger,
+        sword,
 
         axe,
 
-        sword,
+        dagger,
+
+        glyphing,
 
         transmuting
 
@@ -321,7 +369,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # Load background
+    # LOAD BACKGROUND
     # --------------------------------------------------------
 
     image = (
@@ -329,12 +377,27 @@ def main():
             BACKGROUND_FILE
         )
         .convert("RGBA")
-        .resize(
-            (
-                OUTPUT_WIDTH,
-                OUTPUT_HEIGHT
-            ),
+    )
+
+
+    # --------------------------------------------------------
+    # FIT BACKGROUND TO 400 x 150
+    #
+    # This preserves proportions instead of stretching.
+    # --------------------------------------------------------
+
+    image = ImageOps.fit(
+        image,
+        (
+            OUTPUT_WIDTH,
+            OUTPUT_HEIGHT
+        ),
+        method=(
             Image.Resampling.LANCZOS
+        ),
+        centering=(
+            0.5,
+            0.5
         )
     )
 
@@ -345,79 +408,41 @@ def main():
 
 
     # --------------------------------------------------------
-    # Fonts
+    # FONTS
     # --------------------------------------------------------
 
-    name_font = get_font(18)
-
-    info_font = get_font(8)
-
-    rank_font = get_font(11)
+    rank_font = get_font(10)
 
     percent_font = get_font(7)
 
 
     # --------------------------------------------------------
-    # Dynamic SERVPRO name
-    # --------------------------------------------------------
-
-    draw_centered_text(
-        draw,
-        210,
-        8,
-        character_name,
-        name_font,
-        fill=(255, 220, 0, 255),
-        stroke_width=2,
-        stroke_fill=(0, 0, 0, 255)
-    )
-
-
-    # --------------------------------------------------------
-    # Dynamic Level / Core
+    # FIVE PROFICIENCY CENTERS
     #
-    # Y = 30 to move it farther down into the center
-    # of the black bar.
-    # --------------------------------------------------------
-
-    character_info = (
-        f"Level {character_level} | "
-        f"Core: {core_name}"
-    )
-
-    draw_centered_text(
-        draw,
-        210,
-        30,
-        character_info,
-        info_font,
-        fill=(255, 255, 255, 255),
-        stroke_width=1,
-        stroke_fill=(0, 0, 0, 255)
-    )
-
-
-    # --------------------------------------------------------
-    # Centers of the 4 proficiency boxes
-    #
-    # Adjusted for your current SERVPRO background.
+    # Sword
+    # Axe
+    # Dagger
+    # Glyphing
+    # Transmuting
     # --------------------------------------------------------
 
     proficiency_centers = [
 
-        113,   # Dagger
+        112,    # Sword
 
-        174,   # Axe
+        171,    # Axe
 
-        235,   # Sword
+        230,    # Dagger
 
-        296    # Transmuting
+        289,    # Glyphing
+
+        348     # Transmuting
 
     ]
 
 
     # --------------------------------------------------------
-    # Draw rank + percentage
+    # DRAW LIVE VALUES
     # --------------------------------------------------------
 
     for center_x, proficiency in zip(
@@ -425,9 +450,13 @@ def main():
         proficiencies
     ):
 
-        rank = proficiency["rank"]
+        rank = (
+            proficiency["rank"]
+        )
 
-        progress = proficiency["progress"]
+        progress = (
+            proficiency["progress"]
+        )
 
         percentage = (
             percentage_to_next_rank(
@@ -438,53 +467,63 @@ def main():
 
 
         # ----------------------------------------------------
-        # Rank
-        #
-        # Centered inside the black box.
+        # RANK
         # ----------------------------------------------------
 
         draw_centered_text(
             draw,
             center_x,
-            106,
+            119,
             str(rank),
             rank_font,
-            fill=(255, 220, 0, 255),
-            stroke_width=2,
-            stroke_fill=(0, 0, 0, 255)
+            fill=(
+                255,
+                215,
+                0,
+                255
+            ),
+            stroke_width=1,
+            stroke_fill=(
+                0,
+                0,
+                0,
+                255
+            )
         )
 
 
         # ----------------------------------------------------
-        # Percentage
-        #
-        # Centered directly underneath the same box.
+        # PROGRESS PERCENTAGE
         # ----------------------------------------------------
-
-        percent_text = (
-            f"{percentage:.1f}%"
-        )
 
         draw_centered_text(
             draw,
             center_x,
-            124,
-            percent_text,
+            136,
+            f"{percentage:.1f}%",
             percent_font,
-            fill=(255, 255, 255, 255),
+            fill=(
+                255,
+                255,
+                255,
+                255
+            ),
             stroke_width=1,
-            stroke_fill=(0, 0, 0, 255)
+            stroke_fill=(
+                0,
+                0,
+                0,
+                255
+            )
         )
 
 
     # --------------------------------------------------------
-    # Save final signature
+    # SAVE FINAL SIGNATURE
     # --------------------------------------------------------
 
-    image.convert("RGB").save(
-        OUTPUT_FILE,
-        "PNG",
-        optimize=True
+    save_optimized(
+        image
     )
 
 
@@ -493,4 +532,5 @@ def main():
 # ============================================================
 
 if __name__ == "__main__":
+
     main()
