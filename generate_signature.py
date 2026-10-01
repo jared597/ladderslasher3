@@ -428,15 +428,15 @@ def main():
 
     proficiency_centers = [
 
-        112,    # Sword
+        111,    # Sword
 
-        171,    # Axe
+        172,    # Axe
 
-        230,    # Dagger
+        234,    # Dagger
 
-        289,    # Glyphing
+        295,    # Glyphing
 
-        348     # Transmuting
+        356     # Transmuting
 
     ]
 
