@@ -473,7 +473,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            119,
+            113,
             str(rank),
             rank_font,
             fill=(
@@ -499,7 +499,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            136,
+            130,
             f"{percentage:.1f}%",
             percent_font,
             fill=(
