@@ -434,9 +434,9 @@ def main():
 
         234,    # Dagger
 
-        295,    # Glyphing
+        297,    # Glyphing
 
-        356     # Transmuting
+        359     # Transmuting
 
     ]
 
@@ -499,7 +499,7 @@ def main():
         draw_centered_text(
             draw,
             center_x,
-            130,
+            127,
             f"{percentage:.1f}%",
             percent_font,
             fill=(
